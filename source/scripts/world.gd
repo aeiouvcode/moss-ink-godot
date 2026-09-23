@@ -339,7 +339,7 @@ func _rocks(m: InkMesh) -> void:
 			if _log_dist(p) < log_r + size + 0.1 or _blocked(Vector2(p.x, p.z), size):
 				continue
 			p.y = height(p.x, p.z) - size * 0.2
-			m.facet_rock(p, Vector3(size, size * rng.randf_range(0.55, 0.8), size * rng.randf_range(0.75, 1.0)), 5, 8, Color(0, 0.8, 0, 1), 0.2, rng)
+			m.facet_rock(p, Vector3(size, size * rng.randf_range(0.55, 0.8), size * rng.randf_range(0.75, 1.0)), 5, 8, Color(0, 0.6, 0, 1), 0.2, rng)
 			rocks.append([p, size])
 			taken.append([Vector2(p.x, p.z), size])
 			break
@@ -531,11 +531,11 @@ func _umbel(m: InkMesh, thin: InkMesh) -> void:
 
 func _grass(thin: InkMesh) -> void:
 	# a loose fan of wide ink blades, sized to read at island framing
-	for i in 4 + rng.randi() % 4:
+	for i in 7 + rng.randi() % 7:
 		var a := rng.randf() * TAU
-		var off := Vector3(cos(a), 0, sin(a)) * rng.randf() * 0.05
-		var lean := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0.35, 1.1)
-		thin.blade(off, lean, rng.randf_range(0.3, 0.75), rng.randf_range(0.045, 0.07), Color(0, 0.72, 0, 1), 0.0)
+		var off := Vector3(cos(a), 0, sin(a)) * rng.randf() * 0.08
+		var lean := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0.2, 1.6)
+		thin.blade(off, lean, rng.randf_range(0.2, 0.85), rng.randf_range(0.045, 0.07), Color(0, 0.72, 0, 1), 0.0)
 
 
 func _mushrooms(m: InkMesh) -> void:

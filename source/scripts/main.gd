@@ -130,7 +130,8 @@ func _apply_cell() -> void:
 
 
 func _apply_light() -> void:
-	var a := deg_to_rad(float(state.light))
+	# ink pools stay short: the solar-angle param maps onto a higher arc
+	var a := deg_to_rad(28.0 + float(state.light) * 0.8)
 	var to_sun := Vector3(-cos(a), sin(a), 0.35).normalized()
 	sun.global_transform = Transform3D(Basis.looking_at(-to_sun, Vector3.FORWARD if absf(to_sun.y) > 0.98 else Vector3.UP), Vector3.ZERO)
 
