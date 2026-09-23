@@ -530,11 +530,12 @@ func _umbel(m: InkMesh, thin: InkMesh) -> void:
 
 
 func _grass(thin: InkMesh) -> void:
-	for i in 5 + rng.randi() % 5:
+	# a loose fan of wide ink blades, sized to read at island framing
+	for i in 4 + rng.randi() % 4:
 		var a := rng.randf() * TAU
-		var off := Vector3(cos(a), 0, sin(a)) * rng.randf() * 0.06
-		var lean := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0.15, 0.6)
-		thin.blade(off, lean, rng.randf_range(0.14, 0.5), rng.randf_range(0.022, 0.036), Color(0, 0.72, 0, 1), 0.0)
+		var off := Vector3(cos(a), 0, sin(a)) * rng.randf() * 0.05
+		var lean := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0.35, 1.1)
+		thin.blade(off, lean, rng.randf_range(0.3, 0.75), rng.randf_range(0.045, 0.07), Color(0, 0.72, 0, 1), 0.0)
 
 
 func _mushrooms(m: InkMesh) -> void:

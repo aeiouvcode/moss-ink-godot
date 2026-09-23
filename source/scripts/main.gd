@@ -151,7 +151,7 @@ func _process(dt: float) -> void:
 	var portrait := vs.y > vs.x
 	var yaw := 0.55 + sin(clock * 0.07) * 0.75 + lean.x * 0.5
 	var pitch := 0.24 + cos(clock * 0.053) * 0.04 + lean.y * 0.16
-	var dist := 10.0 if portrait else 9.8
+	var dist := 8.4 if portrait else 8.2
 	var target := Vector3(0, -0.2 if portrait else -0.25, 0)
 	cam.position = target + Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * dist
 	cam.look_at(target, Vector3.UP)
