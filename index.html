@@ -3,23 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#d9dde0">
+<meta name="theme-color" content="#a8a59e">
 <meta name="description" content="A dithered 3D field study in Godot. Grow, tune and share a living ink landscape.">
 <title>Moss / Ink - Field Study 03</title>
 <style>
 html,body,#canvas{margin:0;padding:0;border:0}
-body{background:#d9dde0;color:#1c2732;overflow:hidden;touch-action:none;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+body{background:#a8a59e;color:#28241f;overflow:hidden;touch-action:none;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
 #canvas{display:block;width:100vw;height:100vh;height:100dvh}
 #canvas:focus{outline:none}
-#boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#d9dde0;transition:opacity .5s}
+#boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#a8a59e;transition:opacity .5s}
 #boot.gone{opacity:0;pointer-events:none}
 .mark{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
-.bar{width:132px;height:1px;background:rgba(28,39,50,.2);overflow:hidden}
-.bar i{display:block;height:100%;width:0;background:#1c2732;transition:width .2s}
-.sub{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:#49545e}
+.bar{width:132px;height:1px;background:rgba(40,36,31,.25);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:#28241f;transition:width .2s}
+.sub{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:#4a453d}
 #rest{display:none;max-width:280px;text-align:center;line-height:1.6}
 #rest strong{display:block;font:400 30px/1.1 "Iowan Old Style",Baskerville,"Times New Roman",serif;margin-bottom:10px;letter-spacing:0}
-#rest span{font-size:10px;color:#49545e}
+#rest span{font-size:10px;color:#4a453d}
 #boot.resting .bar,#boot.resting .sub{display:none}
 #boot.resting #rest{display:block}
 </style>
@@ -38,7 +38,7 @@ body{background:#d9dde0;color:#1c2732;overflow:hidden;touch-action:none;font-fam
 </div>
 <script src="index.js"></script>
 <script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":210360,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":211708,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 (function () {
   const boot = document.getElementById('boot'), fill = document.getElementById('fill');

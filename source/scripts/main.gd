@@ -1,12 +1,12 @@
 extends Node3D
 ## Moss / Ink field study 03: scene, camera, instrument state and interface.
 
-const FOG := Color(0.851, 0.867, 0.878)
-const LIFT := Color(0.933, 0.941, 0.945)
-const INK := Color(0.110, 0.153, 0.196)
-const INK2 := Color(0.286, 0.329, 0.369)
-const HAIR := Color(0.110, 0.153, 0.196, 0.28)
-const BERRY := Color(0.643, 0.247, 0.341)
+const FOG := Color(0.659, 0.647, 0.620)      # paper
+const LIFT := Color(0.851, 0.839, 0.812)     # light paper, text on ink
+const INK := Color(0.157, 0.141, 0.122)
+const INK2 := Color(0.157, 0.141, 0.122, 0.72)
+const HAIR := Color(0.157, 0.141, 0.122, 0.3)
+const BERRY := Color(0.157, 0.141, 0.122)    # two tones only: the signal is ink
 
 var state := {"seed": "moss41", "density": 62, "light": 38, "wind": 34}
 var paused := false
@@ -17,7 +17,10 @@ var cam: Camera3D
 var sun: DirectionalLight3D
 var mat_thick: ShaderMaterial
 var mat_thin: ShaderMaterial
-var mat_ground: ShaderMaterial
+var mat_line: ShaderMaterial
+var svc: SubViewportContainer
+var sv: SubViewport
+var shrink := 2
 
 var lean := Vector2.ZERO
 var lean_target := Vector2.ZERO
@@ -72,6 +75,22 @@ func _mat(path: String) -> ShaderMaterial:
 func _scene() -> void:
 	mat_thick = _mat("res://shaders/ink.gdshader")
 	mat_thin = _mat("res://shaders/ink_thin.gdshader")
+	mat_line = _mat("res://shaders/ink_outline.gdshader")
+	mat_thick.next_pass = mat_line
+	svc = SubViewportContainer.new()
+	svc.stretch = true
+	svc.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	svc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	svc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var base := Control.new()
+	base.set_anchors_preset(Control.PRESET_FULL_RECT)
+	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(base)
+	base.add_child(svc)
+	sv = SubViewport.new()
+	sv.msaa_3d = Viewport.MSAA_DISABLED
+	sv.handle_input_locally = false
+	svc.add_child(sv)
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = FOG
@@ -82,7 +101,7 @@ func _scene() -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	var we := WorldEnvironment.new()
 	we.environment = env
-	add_child(we)
+	sv.add_child(we)
 
 	sun = DirectionalLight3D.new()
 	sun.shadow_enabled = true
@@ -90,25 +109,24 @@ func _scene() -> void:
 	sun.directional_shadow_max_distance = 26.0
 	sun.shadow_bias = 0.04
 	sun.shadow_normal_bias = 1.2
-	sun.shadow_blur = 1.0
-	add_child(sun)
+	sun.shadow_blur = 0.0
+	sv.add_child(sun)
 
 	cam = Camera3D.new()
 	cam.near = 0.1
 	cam.far = 60.0
-	add_child(cam)
+	sv.add_child(cam)
 
 	world = InkWorld.new()
-	add_child(world)
+	sv.add_child(world)
 	world.setup(mat_thick, mat_thin)
 
 	_apply_cell()
 
 
 func _apply_cell() -> void:
-	var px := maxf(1.5, 1.35 * scale_f)
-	for m in [mat_thick, mat_thin]:
-		m.set_shader_parameter("cell_px", px)
+	shrink = maxi(2, int(round(scale_f)))
+	svc.stretch_shrink = shrink
 
 
 func _apply_light() -> void:
@@ -119,7 +137,7 @@ func _apply_light() -> void:
 
 func _apply_wind() -> void:
 	var w: float = state.wind / 100.0
-	for m in [mat_thick, mat_thin]:
+	for m in [mat_thick, mat_thin, mat_line]:
 		m.set_shader_parameter("wind", w)
 
 
@@ -176,8 +194,8 @@ func _unhandled_input(e: InputEvent) -> void:
 
 
 func _tap(pos: Vector2) -> void:
-	var o := cam.project_ray_origin(pos)
-	var d := cam.project_ray_normal(pos)
+	var o := cam.project_ray_origin(pos / float(shrink))
+	var d := cam.project_ray_normal(pos / float(shrink))
 	var t := 0.0
 	var prev_above := true
 	while t < 40.0:
@@ -395,7 +413,7 @@ func _ui() -> void:
 	title.add_theme_constant_override("separation", -18)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title.add_child(_label("living", serif, 50, INK))
-	title.add_child(_label("topography", serif_it, 50, BERRY))
+	title.add_child(_label("topography", serif_it, 50, INK))
 	read.add_child(title)
 	var dl := GridContainer.new()
 	dl.columns = 2
@@ -562,7 +580,9 @@ func _save_still() -> void:
 	panel.visible = false
 	scrim.visible = false
 	await RenderingServer.frame_post_draw
-	var img := get_viewport().get_texture().get_image()
+	var img := sv.get_texture().get_image()
+	if img != null and not img.is_empty():
+		img.resize(img.get_width() * shrink, img.get_height() * shrink, Image.INTERPOLATE_NEAREST)
 	panel.visible = panel_open
 	scrim.visible = panel_open
 	if img == null or img.is_empty():

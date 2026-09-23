@@ -127,7 +127,7 @@ func _grow(node: Node3D, delay: float) -> void:
 func _island(m: InkMesh) -> void:
 	# top surface: polar grid
 	m.begin()
-	var center := m.vert(Vector3(0, height(0, 0), 0), Color(0, 0.54, 0, 1))
+	var center := m.vert(Vector3(0, height(0, 0), 0), Color(0, 0.96, 0, 1))
 	var rows := []
 	var rim := PackedFloat32Array()
 	for j in NS:
@@ -141,7 +141,7 @@ func _island(m: InkMesh) -> void:
 			var r := rim[j] * f
 			var x := cos(th) * r
 			var z := sin(th) * r
-			var tone := 0.52 + 0.1 * n_hi.get_noise_2d(x * 1.7, z * 1.7)
+			var tone := 0.96 + 0.04 * n_hi.get_noise_2d(x * 1.7, z * 1.7)
 			row.append(m.vert(Vector3(x, height(x, z), z), Color(0, tone, 0, 1)))
 		rows.append(row)
 	var r0: Array = rows[0]
@@ -156,7 +156,7 @@ func _island(m: InkMesh) -> void:
 
 	# soil strata: stepped walls and under-ledges
 	var fs := [1.0, 0.95, 0.85, 0.71, 0.54]
-	var tones := [0.5, 0.36, 0.47, 0.32, 0.42]
+	var tones := [0.72, 0.58, 0.68, 0.52, 0.62]
 	var y := -0.02
 	var ys := [y]
 	for k in fs.size():
@@ -325,7 +325,7 @@ func _log(m: InkMesh) -> void:
 	# moss cushions along the top of the log
 	for i in 3:
 		var p := a.lerp(b, rng.randf_range(0.1, 0.9)) + nrm * log_r * 0.9
-		m.blob(p, Vector3(0.12, 0.06, 0.1) * rng.randf_range(0.8, 1.3), 4, 7, Color(0, 0.46, 0, 0.9), 0.2, rng)
+		m.blob(p, Vector3(0.12, 0.06, 0.1) * rng.randf_range(0.8, 1.3), 4, 7, Color(0, 0.7, 0, 0.9), 0.2, rng)
 
 
 func _rocks(m: InkMesh) -> void:
@@ -453,7 +453,7 @@ func _shrub(m: InkMesh, r: float) -> void:
 		var y := (0.1 + rng.randf() * 0.75) * hmax * (1.0 - d / r * 0.55)
 		var br := r * rng.randf_range(0.3, 0.5)
 		var p := Vector3(cos(a) * d, y, sin(a) * d)
-		var tone := 0.42 + rng.randf() * 0.1
+		var tone := 0.62 + rng.randf() * 0.12
 		m.blob(p, Vector3(br, br * 0.85, br), 5, 8, Color(0.0, tone, 0, lerpf(0.55, 1.0, y / hmax)), 0.16, rng, 0.35, hmax)
 	if berries:
 		for i in 5 + rng.randi() % 5:
