@@ -35,9 +35,14 @@ void light() {
 	float lit = clamp(ndl, 0.0, 1.0);
 	float shadow = ATTENUATION < 0.5 ? 1.0 : 0.0;
 	float hemi = 0.5 + 0.5 * v_nw.y;
-	float v = v_col.g * (0.22 + 0.62 * lit + 0.26 * hemi) * mix(0.6, 1.0, v_col.a);
-	v = smoothstep(0.18, 0.78, v);
+	// bounce floor keeps undersides as dense dots instead of solid ink
+	float v = v_col.g * (0.34 + 0.6 * lit + 0.22 * hemi) * mix(0.75, 1.0, v_col.a);
+	v = max(smoothstep(0.1, 0.66, v), 0.2 * v_col.g);
 	vec3 c = ink_print(v, v_frag);
+	// stems and spokes (blue channel 0.5) are solid ink lines
+	if (abs(v_col.b - 0.5) < 0.1) {
+		c = ink_lin(c_ink.rgb);
+	}
 #ifdef INK_THIN
 	// grass, stems and leaves are pure ink strokes; petals keep their shading
 	if (v_col.g < 0.9) {

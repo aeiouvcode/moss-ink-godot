@@ -413,7 +413,7 @@ func _plant(kind: String, spec: Array) -> Node3D:
 	var thin := InkMesh.new()
 	match kind:
 		"shrub":
-			_shrub(thick, size)
+			_shrub(thick, thin, size)
 		"flower":
 			if rng.randf() < 0.6:
 				_cup_flower(thick, thin, rng.randf() < 0.2)
@@ -443,23 +443,26 @@ func germinate(p: Vector3) -> bool:
 	return true
 
 
-func _shrub(m: InkMesh, r: float) -> void:
-	var berries := rng.randf() < 0.28
-	var count := 8 + rng.randi() % 7
+func _shrub(m: InkMesh, thin: InkMesh, r: float) -> void:
+	# Foliage as loose ink strokes: a fan of blades and small leaves with
+	# paper showing between them, plus one small shaded core for weight.
 	var hmax := r * 1.25
-	for i in count:
+	m.blob(Vector3(0, hmax * 0.18, 0), Vector3(r * 0.42, r * 0.3, r * 0.42), 4, 7, Color(0.0, 0.62, 0, 0.8), 0.16, rng, 0.35, hmax)
+	var blades := 14 + rng.randi() % 8
+	for i in blades:
 		var a := rng.randf() * TAU
-		var d := r * sqrt(rng.randf()) * 0.75
-		var y := (0.1 + rng.randf() * 0.75) * hmax * (1.0 - d / r * 0.55)
-		var br := r * rng.randf_range(0.3, 0.5)
-		var p := Vector3(cos(a) * d, y, sin(a) * d)
-		var tone := 0.62 + rng.randf() * 0.12
-		m.blob(p, Vector3(br, br * 0.85, br), 5, 8, Color(0.0, tone, 0, lerpf(0.55, 1.0, y / hmax)), 0.16, rng, 0.35, hmax)
-	if berries:
-		for i in 5 + rng.randi() % 5:
-			var a := rng.randf() * TAU
-			var p := Vector3(cos(a) * r * 0.62, rng.randf_range(0.4, 0.95) * hmax, sin(a) * r * 0.62)
-			m.blob(p, Vector3.ONE * 0.034, 3, 5, Color(0.0, 0.96, 1.0, 1.0), 0.0, rng, 0.35, hmax)
+		var off := Vector3(cos(a), 0, sin(a)) * rng.randf() * r * 0.3
+		var lean := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0.5, 1.4)
+		thin.blade(off, lean, rng.randf_range(0.55, 1.1) * hmax, rng.randf_range(0.04, 0.06), Color(0, 0.72, 0, 1), 0.0)
+	var leaves := 8 + rng.randi() % 8
+	for i in leaves:
+		var a := rng.randf() * TAU
+		var d := Vector3(cos(a), rng.randf_range(0.2, 0.9), sin(a)).normalized()
+		var up := d.cross(Vector3(-sin(a), 0, cos(a))).normalized()
+		if up.y < 0:
+			up = -up
+		var p := Vector3(cos(a) * r * 0.25, rng.randf_range(0.25, 0.7) * hmax, sin(a) * r * 0.25)
+		thin.petal(p, d, up, rng.randf_range(0.14, 0.22), 0.06, 0.2, Color(0, 0.6, 0, 1), 0.6, 1.0)
 
 
 func _stem(m: InkMesh, h: float, lean: Vector3) -> PackedVector3Array:
@@ -473,7 +476,7 @@ func _stem(m: InkMesh, h: float, lean: Vector3) -> PackedVector3Array:
 		pts.append(q)
 		rad.append(lerpf(0.018, 0.011, t))
 		wts.append(t)
-	m.tube(pts, rad, wts, 5, Color(0, 0.62, 0, 1))
+	m.tube(pts, rad, wts, 5, Color(0, 0.62, 0.5, 1))
 	return pts
 
 
@@ -522,7 +525,7 @@ func _umbel(m: InkMesh, thin: InkMesh) -> void:
 		var rr := spread * sqrt(rng.randf_range(0.35, 1.0))
 		var tip := top + Vector3(cos(a) * rr, 0.07 + (spread - rr) * 0.5, sin(a) * rr)
 		var sp := PackedVector3Array([top, top.lerp(tip, 0.5) + Vector3(0, 0.015, 0), tip])
-		m.tube(sp, PackedFloat32Array([0.006, 0.005, 0.004]), PackedFloat32Array([1, 1, 1]), 3, Color(0, 0.6, 0, 1))
+		m.tube(sp, PackedFloat32Array([0.006, 0.005, 0.004]), PackedFloat32Array([1, 1, 1]), 3, Color(0, 0.6, 0.5, 1))
 		m.blob(tip, Vector3(0.04, 0.028, 0.04), 3, 6, Color(1.0, 1.0, 0, 1), 0.1, rng)
 
 
