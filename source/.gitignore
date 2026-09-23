@@ -1,0 +1,22 @@
+# OS and editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Dependencies and builds
+node_modules/
+dist/
+.cache/
+
+# Logs and local env
+*.log
+.env
+.env.*
+
+# Godot
+.godot/
+.import/
+export_credentials.cfg
+build/
