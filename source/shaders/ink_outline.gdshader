@@ -21,7 +21,8 @@ vec3 sway(vec3 p, float w, float t) {
 
 void vertex() {
 	vec3 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	wp = sway(wp, COLOR.r, TIME);
+	vec3 wc = (MODEL_MATRIX * vec4(UV.x, UV2.x, UV.y, 1.0)).xyz;
+	wp = sway(ink_soft(wp, wc, UV2.y, TIME), COLOR.r, TIME);
 	vec3 wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	vec4 clip = PROJECTION_MATRIX * VIEW_MATRIX * vec4(wp, 1.0);
 	vec2 dir = (PROJECTION_MATRIX * VIEW_MATRIX * vec4(wn, 0.0)).xy;

@@ -18,6 +18,7 @@ var sun: DirectionalLight3D
 var mat_thick: ShaderMaterial
 var mat_thin: ShaderMaterial
 var mat_line: ShaderMaterial
+var poke_timer := 3.0
 var svc: SubViewportContainer
 var sv: SubViewport
 var shrink := 2
@@ -145,6 +146,13 @@ func _apply_wind() -> void:
 func _process(dt: float) -> void:
 	if not paused:
 		clock += dt * (0.45 + state.wind / 100.0)
+		# now and then a gust nudges one clump so the blobs visibly settle
+		poke_timer -= dt
+		if poke_timer <= 0.0:
+			poke_timer = randf_range(4.0, 7.0)
+			var kids := world.plants.get_children()
+			if kids.size() > 0:
+				_poke((kids[randi() % kids.size()] as Node3D).global_position)
 	lean = lean.lerp(lean_target, 1.0 - exp(-dt * 3.0))
 	if not pressing:
 		lean_target = lean_target.lerp(Vector2.ZERO, 1.0 - exp(-dt * 0.25)) if _touchy() else lean_target
@@ -194,6 +202,12 @@ func _unhandled_input(e: InputEvent) -> void:
 			lean_target = Vector2(0.5 - e.position.x / vs.x, 0.5 - e.position.y / vs.y) * 0.9
 
 
+func _poke(p: Vector3) -> void:
+	var t := fmod(Time.get_ticks_msec() / 1000.0, 3600.0)
+	for m in [mat_thick, mat_thin, mat_line]:
+		m.set_shader_parameter("poke", Vector4(p.x, p.y + 0.3, p.z, t))
+
+
 func _tap(pos: Vector2) -> void:
 	var o := cam.project_ray_origin(pos / float(shrink))
 	var d := cam.project_ray_normal(pos / float(shrink))
@@ -202,6 +216,7 @@ func _tap(pos: Vector2) -> void:
 	while t < 40.0:
 		var p := o + d * t
 		if world.rho(p.x, p.z) < 0.9 and p.y <= world.height(p.x, p.z):
+			_poke(p)
 			if world.germinate(Vector3(p.x, world.height(p.x, p.z), p.z)):
 				_say("A new stem took root")
 			else:

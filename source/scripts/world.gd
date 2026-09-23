@@ -90,24 +90,25 @@ func build(seed_text: String, density: int, animate: bool) -> void:
 	thin.add_to(mesh, mat_thin)
 	static_node.mesh = mesh
 
-	var shrubs := 4 + int(density * 0.08)
-	var flowers := 7 + int(density * 0.14)
-	var tufts := 14 + int(density * 0.3)
+	# sparse on purpose: each clump needs paper around it to read
+	var shrubs := 2 + int(density * 0.03)
+	var flowers := 3 + int(density * 0.05)
+	var tufts := 5 + int(density * 0.08)
 	var items: Array = []
 	for i in shrubs:
-		var p = _place(0.05, 0.86, 0.42, 0.55)
+		var p = _place(0.05, 0.86, 0.45, 0.6)
 		if p != null:
 			items.append(["shrub", p])
-	for i in 4:
+	for i in 2:
 		var p = _place_near_log()
 		if p != null:
 			items.append(["mushrooms", p])
 	for i in flowers:
-		var p = _place(0.08, 0.9, 0.22, 0.35)
+		var p = _place(0.08, 0.9, 0.32, 0.45)
 		if p != null:
 			items.append(["flower", p])
 	for i in tufts:
-		var p = _place(0.1, 0.95, 0.12, 0.2)
+		var p = _place(0.1, 0.95, 0.3, 0.42)
 		if p != null:
 			items.append(["grass", p])
 	for it in items:
@@ -121,7 +122,7 @@ func _grow(node: Node3D, delay: float) -> void:
 	node.scale = Vector3.ONE * 0.001
 	var tw := node.create_tween()
 	tw.tween_interval(delay)
-	tw.tween_property(node, "scale", Vector3.ONE, 1.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(node, "scale", Vector3.ONE, 1.6).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 
 
 func _island(m: InkMesh) -> void:
@@ -335,7 +336,7 @@ func _rocks(m: InkMesh) -> void:
 			var e := rng.randf_range(0.5, 0.84)
 			var r := outline(th) * e
 			var p := Vector3(cos(th) * r, 0, sin(th) * r)
-			var size := rng.randf_range(0.26, 0.5)
+			var size := rng.randf_range(0.34, 0.6)
 			if _log_dist(p) < log_r + size + 0.1 or _blocked(Vector2(p.x, p.z), size):
 				continue
 			p.y = height(p.x, p.z) - size * 0.2
@@ -447,8 +448,8 @@ func _shrub(m: InkMesh, thin: InkMesh, r: float) -> void:
 	# Foliage as loose ink strokes: a fan of blades and small leaves with
 	# paper showing between them, plus one small shaded core for weight.
 	var hmax := r * 1.25
-	m.blob(Vector3(0, hmax * 0.18, 0), Vector3(r * 0.42, r * 0.3, r * 0.42), 4, 7, Color(0.0, 0.62, 0, 0.8), 0.16, rng, 0.35, hmax)
-	var blades := 14 + rng.randi() % 8
+	m.blob(Vector3(0, r * 0.42, 0), Vector3(r * 0.72, r * 0.55, r * 0.72), 6, 10, Color(0.0, 0.84, 0, 1.0), 0.12, rng, 0.1, hmax)
+	var blades := 7 + rng.randi() % 5
 	for i in blades:
 		var a := rng.randf() * TAU
 		var off := Vector3(cos(a), 0, sin(a)) * rng.randf() * r * 0.3

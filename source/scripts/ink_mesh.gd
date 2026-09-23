@@ -7,6 +7,12 @@ var v := PackedVector3Array()
 var n := PackedVector3Array()
 var c := PackedColorArray()
 var idx := PackedInt32Array()
+var uv := PackedVector2Array()
+var uv2 := PackedVector2Array()
+## softbody: current piece centre (object space) and softness, carried in UV/UV2
+var _sc := Vector3.ZERO
+var _sk := 0.0
+var soft := 1.0
 var _mark_v := 0
 var _mark_i := 0
 
@@ -15,6 +21,8 @@ func vert(p: Vector3, col: Color) -> int:
 	v.append(p)
 	n.append(Vector3.ZERO)
 	c.append(col)
+	uv.append(Vector2(_sc.x, _sc.z))
+	uv2.append(Vector2(_sc.y, _sk))
 	return v.size() - 1
 
 
@@ -38,6 +46,7 @@ func quad(a: int, b: int, cc: int, d: int, want: Vector3) -> void:
 
 ## Start a piece; smooth() then computes normals only for triangles added since.
 func begin() -> void:
+	_sk = 0.0
 	_mark_v = v.size()
 	_mark_i = idx.size()
 
@@ -72,6 +81,8 @@ func add_to(mesh: ArrayMesh, mat: Material) -> void:
 	arr[Mesh.ARRAY_VERTEX] = v
 	arr[Mesh.ARRAY_NORMAL] = n
 	arr[Mesh.ARRAY_COLOR] = c
+	arr[Mesh.ARRAY_TEX_UV] = uv
+	arr[Mesh.ARRAY_TEX_UV2] = uv2
 	arr[Mesh.ARRAY_INDEX] = idx
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
@@ -82,6 +93,8 @@ func add_to(mesh: ArrayMesh, mat: Material) -> void:
 ## Displaced ellipsoid with single-vertex poles. `rough` displaces radially.
 func blob(center: Vector3, r: Vector3, lat: int, lon: int, col: Color, rough: float, rng: RandomNumberGenerator, sway_by_height := 0.0, sway_ref := 1.0) -> void:
 	begin()
+	_sc = center
+	_sk = soft
 	var jit := PackedFloat32Array()
 	for k in range((lat - 1) * lon + 2):
 		jit.append(1.0 + (rng.randf() * 2.0 - 1.0) * rough)
@@ -131,6 +144,8 @@ func facet_rock(center: Vector3, r: Vector3, lat: int, lon: int, col: Color, rou
 	var tmp := InkMesh.new()
 	tmp.blob(center, r, lat, lon, col, rough, rng)
 	begin()
+	_sc = center
+	_sk = soft * 0.6
 	var i := 0
 	while i < tmp.idx.size():
 		var a := vert(tmp.v[tmp.idx[i]], col)
