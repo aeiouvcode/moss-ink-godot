@@ -36,6 +36,18 @@ var grab_c := Vector3.ZERO
 var pull := Vector3.ZERO
 var pull_v := Vector3.ZERO
 var pull_live := false
+# pick up & throw: a grabbed clump leaves the ground, follows the finger on a
+# camera-facing plane, and on release flies, falls under gravity, bounces and
+# settles with a jelly squash. Clumps thrown off the island regrow at home.
+var held: Node3D = null
+var held_n := Vector3.ZERO
+var held_p := Vector3.ZERO
+var held_off := Vector3.ZERO
+var held_target := Vector3.ZERO
+var held_vel := Vector3.ZERO
+var bodies: Array = []
+var homes := {}
+const GRAV := 9.8
 
 var mono: FontVariation
 var mono_wide: FontVariation
@@ -64,6 +76,9 @@ func _ready() -> void:
 	get_window().content_scale_factor = scale_f
 	_scene()
 	_ui()
+	bodies.clear()
+	homes.clear()
+	held = null
 	world.build(state.seed, state.density, true)
 	_apply_light()
 	_apply_wind()
@@ -160,7 +175,7 @@ func _process(dt: float) -> void:
 			var kids := world.plants.get_children()
 			if kids.size() > 0:
 				_poke((kids[randi() % kids.size()] as Node3D).global_position)
-	_update_pull(minf(dt, 0.05))
+	_step_bodies(minf(dt, 0.05))
 	lean = lean.lerp(lean_target, 1.0 - exp(-dt * 3.0))
 	if not pressing:
 		lean_target = lean_target.lerp(Vector2.ZERO, 1.0 - exp(-dt * 0.25)) if _touchy() else lean_target
@@ -200,6 +215,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			pressing = false
 			if grabbing:
 				grabbing = false
+				_release_held()
 				if moved:
 					return
 			if not moved and Time.get_ticks_msec() - press_time < 450:
@@ -209,11 +225,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		if pressing and grabbing:
 			if e.position.distance_to(press_pos) > 8.0:
 				moved = true
-			var b := cam.global_transform.basis
-			pull += (b.x * e.relative.x - b.y * e.relative.y) * (6.0 / vs.y)
-			pull = pull.limit_length(1.2)
-			pull_v = Vector3.ZERO
-			pull_live = true
+			_drag_held(e.position)
 		elif pressing:
 			if e.position.distance_to(press_pos) > 8.0:
 				moved = true
@@ -250,12 +262,100 @@ func _try_grab(pos: Vector2) -> void:
 	if best == null:
 		return
 	grabbing = true
-	grab_c = best.global_position
-	if OS.has_feature("web") and OS.get_cmdline_args().has("--debug-grab") or DEBUG_GRAB:
-		print("grab ", grab_c)
-	pull = Vector3.ZERO
-	pull_v = Vector3.ZERO
-	pull_live = true
+	_pick(best, pos)
+
+
+func _pick(node: Node3D, pos: Vector2) -> void:
+	for b in bodies:
+		if b.node == node:
+			bodies.erase(b)
+			break
+	if not homes.has(node):
+		homes[node] = node.global_position
+	held = node
+	var f := -cam.global_transform.basis.z
+	held_n = Vector3(f.x, 0.0, f.z).normalized()
+	held_p = node.global_position
+	var hit = _plane_hit(pos)
+	held_off = (node.global_position + Vector3(0, 0.45, 0)) - (hit if hit != null else node.global_position)
+	held_target = node.global_position + Vector3(0, 0.45, 0)
+	held_vel = Vector3.ZERO
+
+
+func _plane_hit(pos: Vector2):
+	var o := cam.project_ray_origin(pos / float(shrink))
+	var d := cam.project_ray_normal(pos / float(shrink))
+	var den := d.dot(held_n)
+	if absf(den) < 1e-4:
+		return null
+	var t := (held_p - o).dot(held_n) / den
+	if t <= 0.0:
+		return null
+	return o + d * t
+
+
+func _drag_held(pos: Vector2) -> void:
+	var hit = _plane_hit(pos)
+	if hit == null:
+		return
+	var tgt: Vector3 = hit + held_off
+	var g := world.height(tgt.x, tgt.z) if world.rho(tgt.x, tgt.z) < 0.95 else -1.0
+	tgt.y = clampf(tgt.y, g + 0.1, 4.5)
+	held_target = tgt
+
+
+func _release_held() -> void:
+	if held == null:
+		return
+	bodies.append({"node": held, "vel": held_vel.limit_length(9.0), "spin": Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * held_vel.length() * 0.6})
+	held = null
+
+
+func _step_bodies(dt: float) -> void:
+	if held != null and not is_instance_valid(held):
+		held = null
+	if held != null:
+		var prev := held.global_position
+		held.global_position = prev.lerp(held_target, 1.0 - exp(-dt * 18.0))
+		held_vel = held_vel.lerp((held.global_position - prev) / maxf(dt, 1e-3), 0.5)
+		# dangle: tilt toward the direction of motion
+		held.rotation.x = lerpf(held.rotation.x, clampf(held_vel.z * 0.08, -0.6, 0.6), 0.2)
+		held.rotation.z = lerpf(held.rotation.z, clampf(-held_vel.x * 0.08, -0.6, 0.6), 0.2)
+	var done: Array = []
+	for b in bodies.duplicate():
+		if not is_instance_valid(b.node):
+			bodies.erase(b)
+			continue
+		var n: Node3D = b.node
+		var v: Vector3 = b.vel
+		v.y -= GRAV * dt
+		var p := n.global_position + v * dt
+		n.rotation += b.spin * dt
+		var on := world.rho(p.x, p.z) < 0.93
+		var g := world.height(p.x, p.z) if on else -INF
+		if p.y <= g and v.y < 0.0:
+			p.y = g
+			if v.y < -1.4:
+				_poke(p)
+				v.y = -v.y * 0.32
+				v.x *= 0.55
+				v.z *= 0.55
+				b.spin *= 0.4
+			else:
+				v = Vector3.ZERO
+				done.append(b)
+				var tw := n.create_tween()
+				tw.tween_property(n, "rotation", Vector3(0, n.rotation.y, 0), 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		if p.y < -9.0:
+			done.append(b)
+			n.global_position = homes.get(n, p)
+			n.rotation = Vector3(0, n.rotation.y, 0)
+			world._grow(n, 0.6)
+			continue
+		n.global_position = p
+		b.vel = v
+	for b in done:
+		bodies.erase(b)
 
 
 func _update_pull(dt: float) -> void:
@@ -364,6 +464,9 @@ func _b36(n: int) -> String:
 
 
 func _regrow(msg: String) -> void:
+	bodies.clear()
+	homes.clear()
+	held = null
 	world.build(state.seed, state.density, true)
 	_sync()
 	_say(msg)
@@ -486,11 +589,11 @@ func _ui() -> void:
 	acts.add_child(sb)
 	ui.add_child(acts)
 
-	var tip := _label("PULL A PLANT AND LET GO · DRAG TO LEAN\nTAP THE MOSS TO GERMINATE", mono_wide, 7, INK2)
+	var tip := _label("LIFT A PLANT AND THROW IT · DRAG TO LEAN\nTAP THE MOSS TO GERMINATE", mono_wide, 7, INK2)
 	tip.name = "tip"
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	if not _touchy():
-		tip.text = "PULL A PLANT AND LET GO · MOVE TO LEAN\nCLICK THE MOSS TO GERMINATE"
+		tip.text = "LIFT A PLANT AND THROW IT · MOVE TO LEAN\nCLICK THE MOSS TO GERMINATE"
 	ui.add_child(tip)
 
 	var read := HBoxContainer.new()
