@@ -22,7 +22,7 @@ vec3 ink_sway(vec3 p, float w, float t) {
 void vertex() {
 	v_col = COLOR;
 	vec3 wc = (MODEL_MATRIX * vec4(UV.x, UV2.x, UV.y, 1.0)).xyz;
-	VERTEX = ink_sway(ink_soft(VERTEX, wc, UV2.y, TIME), COLOR.r, TIME);
+	VERTEX = ink_pull(ink_sway(ink_soft(VERTEX, wc, UV2.y, TIME), COLOR.r, TIME), wc, UV2.y);
 }
 
 void fragment() {

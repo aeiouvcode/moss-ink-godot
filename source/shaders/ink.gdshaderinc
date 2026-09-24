@@ -47,3 +47,26 @@ vec3 ink_soft(vec3 wp, vec3 wc, float k, float t) {
 	o.xz += vec2(sin(t * 2.1 + ph), cos(t * 1.9 + ph)) * (0.03 + abs(kick) * 0.5) * k * max(o.y, 0.0);
 	return wc + o;
 }
+
+uniform vec4 grab = vec4(0.0);
+uniform vec3 pull = vec3(0.0);
+// Pulled clump: the higher a vertex sits above the grabbed base, the further
+// it follows the finger; blobs also thin along the stretch.
+vec3 ink_pull(vec3 wp, vec3 wc, float k) {
+	if (grab.w < 0.5) {
+		return wp;
+	}
+	vec2 dq = wp.xz - grab.xz;
+	float fall = exp(-dot(dq, dq) * 2.2);
+	float h = clamp((wp.y - grab.y) / 0.5, 0.0, 1.0);
+	float w = fall * h * (2.0 - h);
+	float L = length(pull);
+	if (k > 0.001 && L > 0.001) {
+		vec3 dir = pull / L;
+		vec3 o = wp - wc;
+		float along = dot(o, dir);
+		o = (o - dir * along) * (1.0 - 0.35 * min(L, 0.9) * fall) + dir * along * (1.0 + 0.6 * L * fall);
+		wp = wc + o;
+	}
+	return wp + pull * w;
+}

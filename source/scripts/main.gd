@@ -29,6 +29,13 @@ var press_pos := Vector2.ZERO
 var press_time := 0
 var pressing := false
 var moved := false
+# pull & let go: a grabbed clump stretches toward the finger, then springs back
+const DEBUG_GRAB := false
+var grabbing := false
+var grab_c := Vector3.ZERO
+var pull := Vector3.ZERO
+var pull_v := Vector3.ZERO
+var pull_live := false
 
 var mono: FontVariation
 var mono_wide: FontVariation
@@ -153,6 +160,7 @@ func _process(dt: float) -> void:
 			var kids := world.plants.get_children()
 			if kids.size() > 0:
 				_poke((kids[randi() % kids.size()] as Node3D).global_position)
+	_update_pull(minf(dt, 0.05))
 	lean = lean.lerp(lean_target, 1.0 - exp(-dt * 3.0))
 	if not pressing:
 		lean_target = lean_target.lerp(Vector2.ZERO, 1.0 - exp(-dt * 0.25)) if _touchy() else lean_target
@@ -187,19 +195,83 @@ func _unhandled_input(e: InputEvent) -> void:
 			moved = false
 			press_pos = e.position
 			press_time = Time.get_ticks_msec()
+			_try_grab(e.position)
 		else:
 			pressing = false
+			if grabbing:
+				grabbing = false
+				if moved:
+					return
 			if not moved and Time.get_ticks_msec() - press_time < 450:
 				_tap(e.position)
 	elif e is InputEventMouseMotion:
 		var vs := get_viewport().get_visible_rect().size
-		if pressing:
+		if pressing and grabbing:
+			if e.position.distance_to(press_pos) > 8.0:
+				moved = true
+			var b := cam.global_transform.basis
+			pull += (b.x * e.relative.x - b.y * e.relative.y) * (6.0 / vs.y)
+			pull = pull.limit_length(1.2)
+			pull_v = Vector3.ZERO
+			pull_live = true
+		elif pressing:
 			if e.position.distance_to(press_pos) > 8.0:
 				moved = true
 			lean_target += Vector2(-e.relative.x / vs.x, -e.relative.y / vs.y) * 2.4
 			lean_target = lean_target.clamp(Vector2(-1.2, -1), Vector2(1.2, 1))
 		elif not _touchy():
 			lean_target = Vector2(0.5 - e.position.x / vs.x, 0.5 - e.position.y / vs.y) * 0.9
+
+
+func _ground_hit(pos: Vector2):
+	var o := cam.project_ray_origin(pos / float(shrink))
+	var d := cam.project_ray_normal(pos / float(shrink))
+	var t := 0.0
+	while t < 40.0:
+		var p := o + d * t
+		if world.rho(p.x, p.z) < 0.9 and p.y <= world.height(p.x, p.z) + 0.25:
+			return p
+		t += 0.04
+	return null
+
+
+func _try_grab(pos: Vector2) -> void:
+	var hit = _ground_hit(pos)
+	if hit == null:
+		return
+	var best: Node3D = null
+	var bd := 0.7
+	for k in world.plants.get_children():
+		var q: Vector3 = (k as Node3D).global_position
+		var dd := Vector2(q.x - hit.x, q.z - hit.z).length()
+		if dd < bd:
+			bd = dd
+			best = k
+	if best == null:
+		return
+	grabbing = true
+	grab_c = best.global_position
+	if OS.has_feature("web") and OS.get_cmdline_args().has("--debug-grab") or DEBUG_GRAB:
+		print("grab ", grab_c)
+	pull = Vector3.ZERO
+	pull_v = Vector3.ZERO
+	pull_live = true
+
+
+func _update_pull(dt: float) -> void:
+	if not pull_live:
+		return
+	if not grabbing:
+		# underdamped spring: overshoots, jiggles, settles
+		var acc := -pull * 60.0 - pull_v * 4.2
+		pull_v += acc * dt
+		pull += pull_v * dt
+		if pull.length() < 0.002 and pull_v.length() < 0.01:
+			pull = Vector3.ZERO
+			pull_live = false
+	for m in [mat_thick, mat_thin, mat_line]:
+		m.set_shader_parameter("grab", Vector4(grab_c.x, grab_c.y, grab_c.z, 1.0 if pull_live else 0.0))
+		m.set_shader_parameter("pull", pull)
 
 
 func _poke(p: Vector3) -> void:
@@ -414,11 +486,11 @@ func _ui() -> void:
 	acts.add_child(sb)
 	ui.add_child(acts)
 
-	var tip := _label("DRAG TO LEAN · TAP THE MOSS TO GERMINATE\nEACH FIELD HAS A PERMANENT ADDRESS", mono_wide, 7, INK2)
+	var tip := _label("PULL A PLANT AND LET GO · DRAG TO LEAN\nTAP THE MOSS TO GERMINATE", mono_wide, 7, INK2)
 	tip.name = "tip"
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	if not _touchy():
-		tip.text = "MOVE TO LEAN · CLICK THE MOSS TO GERMINATE\nEACH FIELD HAS A PERMANENT ADDRESS"
+		tip.text = "PULL A PLANT AND LET GO · MOVE TO LEAN\nCLICK THE MOSS TO GERMINATE"
 	ui.add_child(tip)
 
 	var read := HBoxContainer.new()
